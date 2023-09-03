@@ -1,6 +1,19 @@
+install.packages("Rcpp")
 library(shiny)
 library(ggplot2)
 library(RColorBrewer)
+library(Rcpp) 
+
+# Define the C++ function
+cppFunction('
+int sumAges(IntegerVector ages) {
+  int total = 0;
+  for(int i = 0; i < ages.size(); ++i) {
+    total += ages[i];
+  }
+  return total;
+}
+')
 
 source("Patient.R")
 
@@ -30,6 +43,9 @@ function(input, output, session) {
       ages <- sapply(rv$patients, function(patient) patient$get_age())
       health_statuses <- sapply(rv$patients, function(patient) patient$get_medical_condition())
       
+      # Use C++ function to sum ages
+      total_age <- sumAges(ages)
+      
       patient_data <- data.frame(Age = ages, HealthStatus = health_statuses)
       patient_data$AgeGroup <- cut(patient_data$Age, breaks = c(0, 30, 50, Inf), labels = c('<30', '30-50', '>50'))
       count_data <- as.data.frame(table(patient_data$AgeGroup, patient_data$HealthStatus))
@@ -38,11 +54,10 @@ function(input, output, session) {
         geom_bar(stat = "identity", position = "dodge") +
         xlab("Age Group") +
         ylab("Frequency") +
-        ggtitle("Distribution of Health Statuses by Age Group") +
+        ggtitle(paste("Distribution of Health Statuses by Age Group. Total age: ", total_age)) +
         scale_fill_brewer(palette = "Set1")
     }
   })
 }
-
 
 
